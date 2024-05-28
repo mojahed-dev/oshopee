@@ -42,11 +42,12 @@ var blogSchema = new mongoose.Schema({
         type: String,
         default: "Admin",
     },
-    toJSON: {
-        virtuals: true,
-    },
+    
+},{
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
 });
 
 //Export the model
-module.exports = mongoose.model('Blog', userSchema);
+module.exports = mongoose.model('Blog', blogSchema);
