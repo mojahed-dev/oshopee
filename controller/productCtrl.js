@@ -1,4 +1,5 @@
 const Product = require('../models/productModel');
+const User = require('../models/userModel');
 const slugify = require('slugify');
 const asyncHandler = require('express-async-handler');
 const { query } = require('express');
@@ -108,7 +109,156 @@ const updateProduct = asyncHandler(async (req, res) => {
     }
   });
 
+  const addToWishList = asyncHandler(async(req, res) => {
+    const { _id } = req.user;
+    const { prodId } = req.body;
 
+    try{
+      const user = await User.findById(_id);
+      const alreadyAdded = user.wishlist.find((id) => id.toString() === prodId);
+
+      if(alreadyAdded) {
+        let user = await User.findByIdAndUpdate(_id, {
+          $pull: {wishlist: prodId},
+        },{
+          new: true,
+        }
+      );
+
+      res.json(user);
+
+      }else {
+        let user = await User.findByIdAndUpdate(_id, {
+          $push: {wishlist: prodId},
+        },{
+          new: true,
+        }
+      );
+
+      res.json(user);
+
+      }
+    }catch(error) {
+      throw new Error(error);
+    }
+  });
+
+
+  /*
+const rating = asyncHandler(async (req, res) => {
+  const { _id } = req.user;
+  const { star, prodId } = req.body;
+  const product = await Product.findById(prodId)
+
+  let alreadyRated = product.ratings.find((userId) => userId.postedby.toString() === _id.toString());
+
+  try {
+    if(alreadyRated) {
+      const product = await Product.findById(prodId);
+    let alreadyRated = product.ratings.find(
+      (userId) => userId.postedby.toString() === _id.toString()
+    );
+    if (alreadyRated) {
+      const updateRating = await Product.updateOne(
+        {
+          ratings: { $elemMatch: alreadyRated },
+        },
+        {
+          $set: { "ratings.$.star": star},
+        },
+        {
+          new: true,
+        }
+      );
+        res.json(updateRating);
+    }else {
+      const rateProduct = await Product.findByIdAndUpdate(
+        prodId,
+        {
+          $push: {
+            ratings: {
+              star: star,
+              postedby: _id,
+            },
+          },
+        },
+        {
+          new: true,
+        }
+      );
+    }
+      res.json(rateProduct);
+    }
+  } catch (error) {
+    throw new Error(error);
+  }
+});  
+*/
+
+const rating = asyncHandler(async (req, res) => {
+  const { _id } = req.user;
+  const { star, prodId } = req.body;
+  
+  try {
+      const product = await Product.findById(prodId);
+      if (!product) {
+          res.status(404);
+          throw new Error('Product not found');
+      }
+
+      let alreadyRated = product.ratings.find((rating) => rating.postedby.toString() === _id.toString());
+
+      if (alreadyRated) {
+          const updateRating = await Product.updateOne(
+              {
+                  _id: prodId,
+                  "ratings._id": alreadyRated._id,
+              },
+              {
+                  $set: { "ratings.$.star": star },
+              },
+              {
+                  new: true,
+              }
+          );
+          // res.json(updateRating);
+      } else {
+          const rateProduct = await Product.findByIdAndUpdate(
+              prodId,
+              {
+                  $push: {
+                      ratings: {
+                          star: star,
+                          postedby: _id,
+                      },
+                  },
+              },
+              {
+                  new: true,
+              }
+          );
+          // res.json(rateProduct);
+      }
+
+    const getallratings = await Product.findById(prodId);
+    let totalRating = getallratings.ratings.length;
+    let ratingsum = getallratings.ratings
+      .map((item) => item.star)
+      .reduce((prev, curr) => prev + curr, 0);
+    let actualRating = Math.round(ratingsum / totalRating);
+    let finalproduct = await Product.findByIdAndUpdate(
+      prodId,
+      {
+        totalrating: actualRating,
+      },
+      { new: true }
+    );
+    res.json(finalproduct);
+
+  } catch (error) {
+      res.status(500).json({ message: error.message });
+  }
+});
   
   
 
@@ -118,4 +268,6 @@ module.exports = {
     getAllProduct,
     updateProduct,
     deleteProduct,
+    addToWishList,
+    rating,
 };
