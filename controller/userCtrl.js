@@ -1,6 +1,5 @@
 const { generateToken } = require('../config/jwtToken');
 const User = require('../models/userModel');
-const validateMongoDbId = require('../utils/validateMongodbid');
 const { generateRefreshToken } = require('../config/refreshToken');
 const jwt = require('jsonwebtoken');
 
@@ -47,6 +46,40 @@ const loginUserCtrl = asyncHandler(async(req, res) => {
             email: findUser?.email,
             mobile:findUser?.mobile,
             token: generateToken(findUser?._id),
+        });
+    } else {
+        throw new Error("Invalid Credentials");
+    }
+})
+
+
+// Admin login
+const loginAdmin = asyncHandler(async(req, res) => {
+    const {email, password} = req.body;
+    // console.log(email, password);
+    // check if uer exits or not
+    const findAdmin = await User.findOne({ email });
+    if (findAdmin.role !== 'admin') throw new Error('Not Authorized.');
+    if (findAdmin && await findAdmin.isPasswordMatched(password)) {
+        const refreshToken = await generateRefreshToken(findAdmin?.id);
+        const updateuser = await User.findByIdAndUpdate(
+            findAdmin._id, 
+            {
+                refreshToken: refreshToken
+            }, 
+            { new: true }
+        );
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            maxAge:72 * 60 * 60 * 1000
+        })
+        res.json({
+            _id: findAdmin?._id,
+            firstname: findAdmin?.firstname,
+            lastname: findAdmin?.lastname,
+            email: findAdmin?.email,
+            mobile:findAdmin?.mobile,
+            token: generateToken(findAdmin?._id),
         });
     } else {
         throw new Error("Invalid Credentials");
@@ -293,4 +326,5 @@ module.exports = {
     updatePassword,
     forgotPasswordToken,
     resetPassword,
+    loginAdmin
 };
