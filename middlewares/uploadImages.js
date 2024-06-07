@@ -169,12 +169,10 @@
 const multer = require('multer');
 const path = require('path');
 const sharp = require('sharp');
-const fs = require('fs');
-
-// Helper to ensure directory existence
+const fs = require('fs').promises; // Use promises API of fs
 const ensureDirectoryExistence = (dir) => {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+    if (!require('fs').existsSync(dir)) {
+        require('fs').mkdirSync(dir, { recursive: true });
     }
 };
 
@@ -187,7 +185,7 @@ const storage = multer.diskStorage({
         cb(null, folder);
     },
     filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname)); // Append time stamp to the original file name
+        cb(null, Date.now() + path.extname(file.originalname)); // Append timestamp to the original file name
     }
 });
 
@@ -208,7 +206,7 @@ const resizeImages = async (req, res, next) => {
 
                 console.log(`Resizing file: ${filePath}`);
                 
-                if (fs.existsSync(filePath)) {
+                if (await fs.stat(filePath).then(() => true).catch(() => false)) { // Check if file exists
                     await sharp(filePath)
                         .resize(300, 300)
                         .toFile(outputFilePath);
@@ -218,8 +216,15 @@ const resizeImages = async (req, res, next) => {
                     // Replace the original file path with the resized file path
                     file.path = outputFilePath;
 
-                    // Delete the original file after resizing
-                    fs.unlinkSync(filePath);
+                    // Add a small delay before attempting to delete the original file
+                    setTimeout(async () => {
+                        try {
+                            await fs.unlink(filePath);
+                            console.log(`Original file deleted: ${filePath}`);
+                        } catch (unlinkError) {
+                            console.error(`Error in deleting the file: ${unlinkError.message}`);
+                        }
+                    }, 100); // 100ms delay
                 } else {
                     console.error(`File not found: ${filePath}`);
                 }
@@ -233,3 +238,4 @@ const resizeImages = async (req, res, next) => {
 };
 
 module.exports = { upload, resizeImages };
+
