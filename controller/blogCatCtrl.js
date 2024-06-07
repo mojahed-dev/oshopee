@@ -1,6 +1,8 @@
 const Category = require('../models/blogCatModel');
 const asyncHandler = require('express-async-handler');
 const validateMongoDbId = require('../utils/validateMongodbid');
+const cloudinaryUploadImg = require('../utils/cloudinary');
+
 
 const createCategory = asyncHandler(async(req, res) => {
     try {
@@ -58,11 +60,13 @@ const getallCategory = asyncHandler(async(req, res) => {
     }
 });
 
+
+
 module.exports = {
     createCategory,
     updateCategory,
     deleteCategory,
     getCategory,
-    getallCategory
+    getallCategory,
 };
 

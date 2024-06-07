@@ -38,6 +38,8 @@ app.use(notFound);
 app.use(errorHandler);
 
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server is running at PORT ${PORT}`);
 })
+
+server.setTimeout(10 * 60 * 1000); // 10 minutes timeout

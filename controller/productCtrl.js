@@ -3,6 +3,10 @@ const User = require('../models/userModel');
 const slugify = require('slugify');
 const asyncHandler = require('express-async-handler');
 const { query } = require('express');
+const cloudinaryUploadImg = require('../utils/cloudinary');
+const validateMongoDbId = require('../utils/validateMongodbid');
+const fs = require('fs');
+
 
 const createProduct =  asyncHandler(async(req, res) => {
     try {
@@ -260,6 +264,256 @@ const rating = asyncHandler(async (req, res) => {
       res.status(500).json({ message: error.message });
   }
 });
+
+/*
+const uploadImages = asyncHandler(async(req, res) => {
+  const { id }  = req.params;
+  validateMongoDbId(id);
+
+  try {
+    const uploader =  (path) => cloudinaryUploadImg(path, "images");
+    const urls = [];
+    const files = req.files;
+      // Debugging output
+      console.log('req.files:', files);
+    for (const file of files) {
+      const { path } = file;
+      const newpath = await uploader(path);
+      console.log("newpath: ", newpath);
+      urls.push(newpath);
+      fs.unlinkSync(path);
+    }
+    const findProduct = await Product.findByIdAndUpdate(id, {
+      images: urls.map((file) => {return file;}),
+    }, {
+      new: true
+    })
+    console.log(findProduct);
+    res.json(findProduct);
+  } catch (error) {
+    throw new Error(error);
+  }
+})
+
+*/
+
+const uploadImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  validateMongoDbId(id);
+
+  try {
+    const uploader = (path) => cloudinaryUploadImg(path, "images");
+    const urls = [];
+    const files = req.files;
+
+    console.log('requested files(uploadImages):', files);
+
+    for (const file of files) {
+      const { path } = file;
+      console.log(`Uploading file(uploadImages): ${path}`);
+      const newpath = await uploader(path);
+      urls.push(newpath.url);
+      
+      // Delete the resized image after uploading to Cloudinary
+      console.log(`Deleting uploaded file(uploadImages): ${file.path}`);
+      await fs.promises.unlink(file.path);
+    }
+
+    const updatedProduct = await Product.findByIdAndUpdate(id, {
+      images: urls,
+    }, {
+      new: true
+    });
+
+    console.log(updatedProduct);
+    res.json(updatedProduct);
+  } catch (error) {
+    console.error("Error uploading images(uploadImages):", error);
+    res.status(500).json({ message: "Error uploading images(uploadImages)", error });
+  }
+});
+
+
+/*
+const uploadImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  validateMongoDbId(id);
+
+  try {
+    const uploader = (path) => cloudinaryUploadImg(path, "oshopee-images");
+    const urls = [];
+    const files = req.files;
+
+    // Debugging output
+    console.log('req.files:', files);
+
+    for (const file of files) {
+      const { path } = file;
+      const newpath = await uploader(path);
+      console.log("newpath: ", newpath);
+      urls.push(newpath);
+      fs.unlinkSync(path);
+    }
+
+    const findProduct = await Product.findByIdAndUpdate(
+      id,
+      {
+        images: urls,
+      },
+      {
+        new: true,
+      }
+    );
+    
+    console.log(findProduct);
+    res.json(findProduct);
+  } catch (error) {
+    console.error("Error uploading images: ", error); // More detailed error logging
+    res.status(500).json({ error: error.message }); // Respond with error message
+  }
+});
+
+*/
+
+/*
+const uploadImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  validateMongoDbId(id);
+
+  try {
+    const uploader = (path) => cloudinaryUploadImg(path, "oshopee-images");
+    const urls = [];
+    const files = req.files;
+
+    // Debugging output
+    console.log('req.files:', files);
+
+    for (const file of files) {
+      const { path } = file;
+      try {
+        const newpath = await uploader(path);
+        console.log("newpath: ", newpath);
+        urls.push(newpath);
+        await fs.unlink(path); // Use async unlink
+      } catch (unlinkError) {
+        console.error(`Failed to delete file ${path}:`, unlinkError);
+      }
+    }
+
+    const findProduct = await Product.findByIdAndUpdate(
+      id,
+      {
+        images: urls,
+      },
+      {
+        new: true,
+      }
+    );
+
+    console.log(findProduct);
+    res.json(findProduct);
+  } catch (error) {
+    console.error("Error uploading images: ", error); // More detailed error logging
+    res.status(500).json({ error: error.message }); // Respond with error message
+  }
+});*/
+
+/*
+const uploadImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  validateMongoDbId(id);
+
+  try {
+    const uploader = async (path) => {
+      try {
+        const result = await cloudinaryUploadImg(path);
+        return result.url;
+      } catch (error) {
+        console.error('Error uploading to Cloudinary:', error);
+        throw new Error('Failed to upload image to Cloudinary');
+      }
+    };
+
+    const files = req.files;
+
+    console.log('req.files:', files);
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: 'No files were uploaded.' });
+    }
+
+    const uploadPromises = files.map(file => uploader(file.path));
+    const urls = await Promise.all(uploadPromises);
+
+    const findProduct = await Product.findByIdAndUpdate(
+      id,
+      { images: urls },
+      { new: true }
+    );
+
+    console.log('Updated product:', findProduct);
+    res.json(findProduct);
+  } catch (error) {
+    console.error('Error in uploadImages:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+*/
+
+
+/*
+const uploadImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  console.log('ID:', id);
+  validateMongoDbId(id);
+
+  try {
+    const uploader = async (path) => {
+      try {
+        console.log('Uploading file:', path);
+        const result = await cloudinaryUploadImg(path);
+        console.log('Uploaded file to:', result);
+        return result;
+      } catch (error) {
+        console.error('Error uploading to Cloudinary:', error);
+        throw new Error('Failed to upload image to Cloudinary');
+      }
+    };
+
+    const files = req.files;
+    console.log('req.files:', files);
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: 'No files were uploaded.' });
+    }
+
+    const urls = [];
+    for (const file of files) {
+      const newPath = await uploader(file.path);
+      urls.push(newPath);
+      // fs.unlinkSync(path)
+    }
+
+    console.log('URLs:', urls);
+
+    const findProduct = await Product.findByIdAndUpdate(
+      id,
+      { images: urls },
+      { new: true }
+    );
+
+    console.log('Updated product:', findProduct);
+    res.json(findProduct);
+  } catch (error) {
+    console.error('Error in uploadImages:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
+*/
+
+
   
   
 
@@ -271,4 +525,5 @@ module.exports = {
     deleteProduct,
     addToWishList,
     rating,
+    uploadImages,
 };
