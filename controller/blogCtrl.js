@@ -162,54 +162,76 @@ const disLikeBlog = asyncHandler(async (req, res) => {
     }
   });
 
-  const uploadImages = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    console.log('ID:', id);
-    validateMongoDbId(id);
+  // const uploadImages = asyncHandler(async (req, res) => {
+  //   const { id } = req.params;
+  //   console.log('ID:', id);
+  //   validateMongoDbId(id);
   
-    try {
-      const uploader = async (path) => {
-        try {
-          console.log('Uploading file:', path);
-          const result = await cloudinaryUploadImg(path);
-          console.log('Uploaded file to:', result);
-          return result;
-        } catch (error) {
-          console.error('Error uploading to Cloudinary:', error);
-          throw new Error('Failed to upload image to Cloudinary');
-        }
-      };
+  //   try {
+  //     const uploader = async (path) => {
+  //       try {
+  //         console.log('Uploading file:', path);
+  //         const result = await cloudinaryUploadImg(path);
+  //         console.log('Uploaded file to:', result);
+  //         return result;
+  //       } catch (error) {
+  //         console.error('Error uploading to Cloudinary:', error);
+  //         throw new Error('Failed to upload image to Cloudinary');
+  //       }
+  //     };
   
-      const files = req.files;
-      console.log('req.files:', files);
+  //     const files = req.files;
+  //     console.log('req.files:', files);
   
-      if (!files || files.length === 0) {
-        return res.status(400).json({ message: 'No files were uploaded.' });
-      }
+  //     if (!files || files.length === 0) {
+  //       return res.status(400).json({ message: 'No files were uploaded.' });
+  //     }
   
-      const urls = [];
-      for (const file of files) {
-        const newPath = await uploader(file.path);
-        urls.push(newPath);
-        fs.unlinkSync(path);
-      }
+  //     const urls = [];
+  //     for (const file of files) {
+  //       const newPath = await uploader(file.path);
+  //       urls.push(newPath);
+  //       fs.unlinkSync(path);
+  //     }
   
-      console.log('URLs:', urls);
+  //     console.log('URLs:', urls);
   
-      const findBlog = await Blog.findByIdAndUpdate(
-        id,
-        { images: urls },
-        { new: true }
-      );
+  //     const findBlog = await Blog.findByIdAndUpdate(
+  //       id,
+  //       { images: urls },
+  //       { new: true }
+  //     );
   
-      console.log('Updated product:', findBlog);
-      res.json(findBlog);
-    } catch (error) {
-      console.error('Error in uploadImages:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  });
+  //     console.log('Updated product:', findBlog);
+  //     res.json(findBlog);
+  //   } catch (error) {
+  //     console.error('Error in uploadImages:', error);
+  //     res.status(500).json({ message: 'Internal server error' });
+  //   }
+  // });
 
+
+  const uploadImagesToCloudinary = async (req, res, next) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).send('No files uploaded');
+        }
+
+        const uploadPromises = req.files.map(file => cloudinaryUploadImg(file.path));
+        const results = await Promise.all(uploadPromises);
+
+        // Delete local files after upload
+        req.files.forEach(file => fs.unlinkSync(file.path));
+
+        // Respond with the Cloudinary URLs
+        res.status(200).json({
+            message: 'Images uploaded successfully',
+            urls: results.map(result => result.url),
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 
 
 module.exports ={
@@ -220,5 +242,5 @@ module.exports ={
     deleteBlog,
     likeBlog,
     disLikeBlog,
-    uploadImages,
+    uploadImagesToCloudinary,
 }

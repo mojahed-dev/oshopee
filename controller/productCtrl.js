@@ -297,41 +297,66 @@ const uploadImages = asyncHandler(async(req, res) => {
 
 */
 
-const uploadImages = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  validateMongoDbId(id);
+// const uploadImages = asyncHandler(async (req, res) => {
+//   const { id } = req.params;
+//   validateMongoDbId(id);
 
-  try {
-    const uploader = (path) => cloudinaryUploadImg(path, "images");
-    const urls = [];
-    const files = req.files;
+//   try {
+//     const uploader = (path) => cloudinaryUploadImg(path, "images");
+//     const urls = [];
+//     const files = req.files;
 
-    console.log('requested files(uploadImages):', files);
+//     console.log('requested files(uploadImages):', files);
 
-    for (const file of files) {
-      const { path } = file;
-      console.log(`Uploading file(uploadImages): ${path}`);
-      const newpath = await uploader(path);
-      urls.push(newpath.url);
+//     for (const file of files) {
+//       const { path } = file;
+//       console.log(`Uploading file(uploadImages): ${path}`);
+//       const newpath = await uploader(path);
+//       urls.push(newpath.url);
       
-      // Delete the resized image after uploading to Cloudinary
-      console.log(`Deleting uploaded file(uploadImages): ${file.path}`);
-      await fs.promises.unlink(file.path);
-    }
+//       // Delete the resized image after uploading to Cloudinary
+//       console.log(`Deleting uploaded file(uploadImages): ${file.path}`);
+//       await fs.promises.unlink(file.path);
+//     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(id, {
-      images: urls,
-    }, {
-      new: true
-    });
+//     const updatedProduct = await Product.findByIdAndUpdate(id, {
+//       images: urls,
+//     }, {
+//       new: true
+//     });
 
-    console.log(updatedProduct);
-    res.json(updatedProduct);
+//     console.log(updatedProduct);
+//     res.json(updatedProduct);
+//   } catch (error) {
+//     console.error("Error uploading images(uploadImages):", error);
+//     res.status(500).json({ message: "Error uploading images(uploadImages)", error });
+//   }
+// });
+
+
+
+const uploadImagesToCloudinary = async (req, res, next) => {
+  try {
+      if (!req.files || req.files.length === 0) {
+          return res.status(400).send('No files uploaded');
+      }
+
+      const uploadPromises = req.files.map(file => cloudinaryUploadImg(file.path));
+      const results = await Promise.all(uploadPromises);
+
+      // Delete local files after upload
+      req.files.forEach(file => fs.unlinkSync(file.path));
+
+      // Respond with the Cloudinary URLs
+      res.status(200).json({
+          message: 'Images uploaded successfully',
+          urls: results.map(result => result.url),
+      });
   } catch (error) {
-    console.error("Error uploading images(uploadImages):", error);
-    res.status(500).json({ message: "Error uploading images(uploadImages)", error });
+      console.error(`Error in Cloudinary upload: ${error}`);
+      next(error);
   }
-});
+};
 
 
 /*
@@ -525,5 +550,5 @@ module.exports = {
     deleteProduct,
     addToWishList,
     rating,
-    uploadImages,
+    uploadImagesToCloudinary
 };
