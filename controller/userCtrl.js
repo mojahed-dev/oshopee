@@ -2,6 +2,7 @@ const { generateToken } = require('../config/jwtToken');
 const User = require('../models/userModel');
 const { generateRefreshToken } = require('../config/refreshToken');
 const jwt = require('jsonwebtoken');
+const validateMongoDbId = require("../utils/validateMongodbid");
 
 const asyncHandler = require("express-async-handler");
 const sendEmail = require('./emailCtrl');
@@ -86,6 +87,18 @@ const loginAdmin = asyncHandler(async(req, res) => {
     }
 })
 
+// Get wishlists:
+const  getWishList = asyncHandler(async(req, res) => {
+    const { _id } = req.user;
+    try{
+        const findUser = await User.findById(_id).populate('wishlist');
+        res.json(findUser);
+    }
+    catch(error){
+        throw new Error(error);
+    }
+}); 
+
 // Get all users
 const getallUser = asyncHandler(async (req, res) => {
     try {
@@ -94,7 +107,7 @@ const getallUser = asyncHandler(async (req, res) => {
     } catch (error) {
         throw new Error(error);
     }
-})
+}) 
 
 // Handle refresh token
 
@@ -198,6 +211,28 @@ const updateaUser = asyncHandler(async(req, res) => {
             }
     );
     res.json(updatedUser)
+    } catch (error) {
+        throw new Error(error);
+    }
+});
+
+
+// save user address
+const saveAddress = asyncHandler(async (req, res, next) => {
+    const { _id } = req.user;
+    validateMongoDbId(_id);
+
+    try {
+        const updatedUser = await User.findByIdAndUpdate(
+            _id,
+            {
+                address: req?.body?.address,
+            },
+            {
+                new: true,
+            }
+        );
+        res.json(updatedUser)
     } catch (error) {
         throw new Error(error);
     }
@@ -326,5 +361,8 @@ module.exports = {
     updatePassword,
     forgotPasswordToken,
     resetPassword,
-    loginAdmin
+    loginAdmin,
+    getWishList,
+    saveAddress,
+
 };

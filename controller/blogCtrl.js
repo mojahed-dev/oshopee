@@ -3,7 +3,8 @@ const User = require("../models/userModel");
 const asyncHandler = require("express-async-handler");
 const validateMongoDbId = require("../utils/validateMongodbid");
 const { authMiddleware, isAdmin } = require("../middlewares/authMiddleware");
-const fs = require('fs');
+const cloudinaryUploadImg = require('../utils/cloudinary');
+const fs = require('fs').promises;
 
 const createBlog = asyncHandler(async(req, res) => {
     try {
@@ -212,23 +213,42 @@ const disLikeBlog = asyncHandler(async (req, res) => {
 
 
   const uploadImagesToCloudinary = async (req, res, next) => {
+    const { id } = req.params; // Get the Blog ID from the route parameters
+
     try {
+        // Check if any files were uploaded
         if (!req.files || req.files.length === 0) {
             return res.status(400).send('No files uploaded');
         }
 
+        // Upload files to Cloudinary and collect URLs
         const uploadPromises = req.files.map(file => cloudinaryUploadImg(file.path));
         const results = await Promise.all(uploadPromises);
+        const urls = results.map(result => result.url);
 
-        // Delete local files after upload
-        req.files.forEach(file => fs.unlinkSync(file.path));
+        // Delete local files after successful upload to Cloudinary
+        await Promise.all(req.files.map(file => fs.unlink(file.path)));
 
-        // Respond with the Cloudinary URLs
+        // Find the Blog by ID and update the images field
+        const updatedBlog = await Blog.findByIdAndUpdate(
+            id,
+            { $push: { images: { $each: urls } } }, // Add the URLs to the images array
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedBlog) {
+            return res.status(404).send('Blog not found');
+        }
+
+        // Respond with the Cloudinary URLs and the updated Blog
         res.status(200).json({
-            message: 'Images uploaded successfully',
-            urls: results.map(result => result.url),
+            message: 'Images uploaded and URLs added to the Blog successfully',
+            urls,
+            blog: updatedBlog
         });
     } catch (error) {
+        // Log and handle the error
+        console.error(`Error during image upload to Cloudinary: ${error}`);
         next(error);
     }
 };
