@@ -11,25 +11,26 @@ const {
      deleteBlog, 
      likeBlog, 
      disLikeBlog, 
-     uploadImagesToCloudinary
+     uploadImagesToCloudinary,
+     uploadImages
      } = require('../controller/blogCtrl');
 
 const {
-    upload,
-    resizeImages,
+    uploadPhoto,
+    blogImgResize,
 } = require('../middlewares/uploadImages');
 
 router.put('/likes', authMiddleware, likeBlog);
 router.put('/dislikes', authMiddleware, disLikeBlog);
 router.post('/', authMiddleware, isAdmin, createBlog);
-router.put(
-    '/upload/:id', 
-    authMiddleware, 
-    isAdmin, 
-    upload.array('blogImages', 2),
-    resizeImages,
-    uploadImagesToCloudinary
-);
+// router.put(
+//     "/upload/:id",
+//     authMiddleware,
+//     isAdmin,
+//     uploadPhoto.array("images", 2),
+//     blogImgResize,
+//     uploadImages
+//   );
 router.put('/:id', authMiddleware, isAdmin, updateBlog);
 router.get("/:id", getBlog);
 router.get("/", getAllBlogs);

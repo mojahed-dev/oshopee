@@ -509,6 +509,27 @@ const getOrders = asyncHandler(async(req, res) => {
     }
 });
 
+const updateOrderStatus = asyncHandler(async(req, res) => {
+    const { status } = req.body;
+    const { id } = req.params;
+    validateMongoDbId(id);
+    try {
+        const updateOrder = await Order.findByIdAndUpdate(id, {
+            orderStatus: status,
+            paymentIntent: {
+                status: status,
+            }
+        }, {
+            new: true
+        });
+    
+        res.json(updateOrder)
+    } catch (error) {
+        throw new Error(error);
+    }
+
+});
+
 
 module.exports = { 
     createUser, 
@@ -533,6 +554,6 @@ module.exports = {
     applyCoupon,
     createOrder,
     getOrders,
-
+    updateOrderStatus,
 
 };

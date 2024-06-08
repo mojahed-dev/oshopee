@@ -5,7 +5,7 @@ const asyncHandler = require('express-async-handler');
 const { query } = require('express');
 const cloudinaryUploadImg = require('../utils/cloudinary');
 const validateMongoDbId = require('../utils/validateMongodbid');
-const fs = require('fs').promises;
+const fs = require('fs');
 
 
 const createProduct =  asyncHandler(async(req, res) => {
@@ -265,37 +265,39 @@ const rating = asyncHandler(async (req, res) => {
   }
 });
 
-/*
+
 const uploadImages = asyncHandler(async(req, res) => {
-  const { id }  = req.params;
-  validateMongoDbId(id);
+  // const { id }  = req.params;
+  // validateMongoDbId(id);
 
   try {
     const uploader =  (path) => cloudinaryUploadImg(path, "images");
     const urls = [];
     const files = req.files;
-      // Debugging output
-      console.log('req.files:', files);
     for (const file of files) {
       const { path } = file;
       const newpath = await uploader(path);
-      console.log("newpath: ", newpath);
+      // console.log("newpath: ", newpath);
       urls.push(newpath);
-      fs.unlinkSync(path);
+     fs.unlinkSync(path);
     }
-    const findProduct = await Product.findByIdAndUpdate(id, {
-      images: urls.map((file) => {return file;}),
-    }, {
-      new: true
+
+    const images =  urls.map((file) => {
+      return file;
     })
-    console.log(findProduct);
-    res.json(findProduct);
+
+    // const findProduct = await Product.findByIdAndUpdate(id, {
+    //   images: urls.map((file) => {return file;}),
+    // }, {
+    //   new: true
+    // })
+    res.json(images);
   } catch (error) {
     throw new Error(error);
   }
 })
 
-*/
+
 
 // const uploadImages = asyncHandler(async (req, res) => {
 //   const { id } = req.params;
@@ -336,7 +338,7 @@ const uploadImages = asyncHandler(async(req, res) => {
 
 
 const uploadImagesToCloudinary = async (req, res, next) => {
-  const { id } = req.params; // Get the Blog ID from the route parameters
+  const { id } = req.params; // Get the Product ID from the route parameters
 
   try {
       // Check if any files were uploaded
@@ -344,18 +346,25 @@ const uploadImagesToCloudinary = async (req, res, next) => {
           return res.status(400).send('No files uploaded');
       }
 
-      // Upload files to Cloudinary and collect URLs
+      // Upload files to Cloudinary and collect the results
       const uploadPromises = req.files.map(file => cloudinaryUploadImg(file.path));
       const results = await Promise.all(uploadPromises);
+
+      // Extract URLs, public_ids, and asset_ids from the results
       const urls = results.map(result => result.url);
+      const imageDetails = results.map(result => ({
+          url: result.url,
+          public_id: result.public_id,
+          asset_id: result.asset_id
+      }));
 
       // Delete local files after successful upload to Cloudinary
       await Promise.all(req.files.map(file => fs.unlink(file.path)));
 
-      // Find the Blog by ID and update the images field
+      // Find the Product by ID and update the images field
       const updateProduct = await Product.findByIdAndUpdate(
           id,
-          { $push: { images: { $each: urls } } }, // Add the URLs to the images array
+          { $push: { images: { $each: imageDetails } } }, // Add the image details to the images array
           { new: true } // Return the updated document
       );
 
@@ -363,11 +372,11 @@ const uploadImagesToCloudinary = async (req, res, next) => {
           return res.status(404).send('Product not found');
       }
 
-      // Respond with the Cloudinary URLs and the updated Blog
+      // Respond with the Cloudinary details and the updated Product
       res.status(200).json({
-          message: 'Images uploaded and URLs added to the Product successfully',
-          urls,
-          Product: updateProduct
+          message: 'Images uploaded and details added to the Product successfully',
+          images: imageDetails, // Include all the image details
+          product: updateProduct // Note: changed the property name to lowercase 'product' for consistency
       });
   } catch (error) {
       // Log and handle the error
@@ -375,6 +384,7 @@ const uploadImagesToCloudinary = async (req, res, next) => {
       next(error);
   }
 };
+
 
 
 /*
@@ -568,5 +578,6 @@ module.exports = {
     deleteProduct,
     addToWishList,
     rating,
+    uploadImages,
     uploadImagesToCloudinary
 };

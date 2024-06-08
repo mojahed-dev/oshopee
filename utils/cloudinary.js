@@ -10,6 +10,8 @@ const cloudinaryUploadImg = async(fileToUpload) => {
         cloudinary.uploader.upload((fileToUpload), (result) => {
             resolve({
                 url: result.secure_url,
+                asset_id: result.asset_id,
+                public_id: result.public_id
             },{
                 resource_type: "auto",
             })
@@ -18,54 +20,6 @@ const cloudinaryUploadImg = async(fileToUpload) => {
 };
 
 
-// const cloudinaryUploadImg = async (fileToUploads) => {
-//     return new Promise((resolve) => {
-//       cloudinary.uploader.upload(fileToUploads, (result) => {
-//         resolve(
-//           {
-//             url: result.secure_url,
-//             asset_id: result.asset_id,
-//             public_id: result.public_id,
-//           },
-//           {
-//             resource_type: "auto",
-//           }
-//         );
-//       });
-//     });
-//   };
-
-
-// const cloudinaryUploadImg = async (fileToUpload) => {
-//     return new Promise((resolve, reject) => {
-//       cloudinary.uploader.upload(
-//         fileToUpload,
-//         { resource_type: "auto" },
-//         (error, result) => {
-//           if (error) {
-//             reject(error);
-//           } else {
-//             resolve({
-//               url: result.secure_url,
-//             });
-//           }
-//         }
-//       );
-//     });
-//   };
-
-// const cloudinaryUploadImg = async (fileToUpload) => {
-//     return new Promise((resolve, reject) => {
-//         cloudinary.uploader.upload(fileToUpload, { resource_type: "auto" }, (error, result) => {
-//             if (error) {
-//                 return reject(error);
-//             }
-//             resolve({
-//                 url: result.secure_url,
-//             });
-//         });
-//     });
-// };
 
 
 module.exports = cloudinaryUploadImg;
