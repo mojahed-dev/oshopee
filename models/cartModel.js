@@ -1,7 +1,7 @@
 const mongoose = require('mongoose'); // Erase if already required
 
 // Declare the Schema of the Mongo model
-var orderSchema = new mongoose.Schema({
+var cartSchema = new mongoose.Schema({
     products:[
         {
             product: {
@@ -10,14 +10,11 @@ var orderSchema = new mongoose.Schema({
             },
             count: Number,
             color: String,
+            price: Number,
         }
     ],
-    paymentIntent: {},
-    orderStatus: {
-        type: String,
-        default: "Not Process",
-        enum: ["Not Processed", "Cash on Delivery", "Processing", "Dispatch", "Cancel", "Delivered"],
-    },
+    cartTotal: Number,
+    totalAfterDiscount: Number,
     orderby: {
          type: mongoose.Schema.Types.ObjectId,
          ref: "User",
@@ -25,9 +22,7 @@ var orderSchema = new mongoose.Schema({
 },
 {
     timestamps: true,
-}
-
-);
+});
 
 //Export the model
-module.exports = mongoose.model('Order', orderSchema);
+module.exports = mongoose.model('Cart', cartSchema);
