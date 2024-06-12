@@ -8,7 +8,8 @@ const {
     addToWishList,
     rating,
     uploadImagesToCloudinary,
-    uploadImages
+    uploadImages,
+    deleteImages
     
 } = require('../controller/productCtrl');
 const {
@@ -32,9 +33,8 @@ router.put('/rating', authMiddleware, rating);
 router.put('/wishlist', authMiddleware, addToWishList);
 router.put('/:id', authMiddleware, isAdmin, updateProduct);
 router.delete('/:id', authMiddleware, isAdmin, deleteProduct);
+router.delete('/delete-img/:id', authMiddleware, isAdmin, deleteImages);
 router.get('/', getAllProduct);
  
-
-
 
 module.exports = router;    

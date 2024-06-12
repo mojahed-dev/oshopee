@@ -3,7 +3,7 @@ const User = require('../models/userModel');
 const slugify = require('slugify');
 const asyncHandler = require('express-async-handler');
 const { query } = require('express');
-const cloudinaryUploadImg = require('../utils/cloudinary');
+const { cloudinaryUploadImg, cloudinaryDeleteImg }= require('../utils/cloudinary');
 const validateMongoDbId = require('../utils/validateMongodbid');
 const fs = require('fs');
 
@@ -266,32 +266,13 @@ const rating = asyncHandler(async (req, res) => {
 });
 
 
-const uploadImages = asyncHandler(async(req, res) => {
-  // const { id }  = req.params;
-  // validateMongoDbId(id);
 
+
+const deleteImages = asyncHandler(async(req, res) => {
+  const { id } = req.params;
   try {
-    const uploader =  (path) => cloudinaryUploadImg(path, "images");
-    const urls = [];
-    const files = req.files;
-    for (const file of files) {
-      const { path } = file;
-      const newpath = await uploader(path);
-      // console.log("newpath: ", newpath);
-      urls.push(newpath);
-     fs.unlinkSync(path);
-    }
-
-    const images =  urls.map((file) => {
-      return file;
-    })
-
-    // const findProduct = await Product.findByIdAndUpdate(id, {
-    //   images: urls.map((file) => {return file;}),
-    // }, {
-    //   new: true
-    // })
-    res.json(images);
+    const deleter = cloudinaryDeleteImg(id, "images");
+    res.json({ message: "Deleted" });
   } catch (error) {
     throw new Error(error);
   }
@@ -299,9 +280,10 @@ const uploadImages = asyncHandler(async(req, res) => {
 
 
 
+
 // const uploadImages = asyncHandler(async (req, res) => {
-//   const { id } = req.params;
-//   validateMongoDbId(id);
+//   // const { id } = req.params;
+//   // validateMongoDbId(id);
 
 //   try {
 //     const uploader = (path) => cloudinaryUploadImg(path, "images");
@@ -321,14 +303,14 @@ const uploadImages = asyncHandler(async(req, res) => {
 //       await fs.promises.unlink(file.path);
 //     }
 
-//     const updatedProduct = await Product.findByIdAndUpdate(id, {
-//       images: urls,
-//     }, {
-//       new: true
-//     });
+//     // const updatedProduct = await Product.findByIdAndUpdate(id, {
+//     //   images: urls,
+//     // }, {
+//     //   new: true
+//     // });
 
-//     console.log(updatedProduct);
-//     res.json(updatedProduct);
+//     console.log(urls);
+//     res.json(urls);
 //   } catch (error) {
 //     console.error("Error uploading images(uploadImages):", error);
 //     res.status(500).json({ message: "Error uploading images(uploadImages)", error });
@@ -337,53 +319,86 @@ const uploadImages = asyncHandler(async(req, res) => {
 
 
 
-const uploadImagesToCloudinary = async (req, res, next) => {
-  const { id } = req.params; // Get the Product ID from the route parameters
+// const uploadImages = async (req, res) => {
+//   //const { id } = req.params; // Get the Product ID from the route parameters
 
+//   try {
+//       // Check if any files were uploaded
+//       if (!req.files || req.files.length === 0) {
+//           return res.status(400).send('No files uploaded');
+//       }
+
+//       // Upload files to Cloudinary and collect the results
+//       const uploadPromises = req.files.map(file => cloudinaryUploadImg(file.path));
+//       const results = await Promise.all(uploadPromises);
+
+//       // Extract URLs, public_ids, and asset_ids from the results
+//       const urls = results.map(result => result.url);
+//       // const imageDetails = results.map(result => ({
+//       //     url: result.url,
+//       //     public_id: result.public_id,
+//       //     asset_id: result.asset_id
+//       // }));
+
+//       // Delete local files after successful upload to Cloudinary
+//       await Promise.all(req.files.map(file => fs.unlinkSync(file.path)));
+
+//       // Find the Product by ID and update the images field
+//       // const updateProduct = await Product.findByIdAndUpdate(
+//       //     id,
+//       //     { $push: { images: { $each: imageDetails } } }, // Add the image details to the images array
+//       //     { new: true } // Return the updated document
+//       // );
+
+//       // if (!updateProduct) {
+//       //     return res.status(404).send('Product not found');
+//       // }
+
+//       // Respond with the Cloudinary details and the updated Product
+//       res.status(200).json(urls);
+//   } catch (error) {
+//       // Log and handle the error
+//       console.error(`Error during image upload to Cloudinary: ${error}`);
+//       next(error);
+//   }
+// };
+
+
+
+const uploadImages = asyncHandler(async(req, res) => {
   try {
-      // Check if any files were uploaded
-      if (!req.files || req.files.length === 0) {
-          return res.status(400).send('No files uploaded');
-      }
+    const uploader = (path) => cloudinaryUploadImg(path, "images");
+    const urls = [];
+    const files = req.files;
 
-      // Upload files to Cloudinary and collect the results
-      const uploadPromises = req.files.map(file => cloudinaryUploadImg(file.path));
-      const results = await Promise.all(uploadPromises);
+    for (const file of files) {
+      const { path } = file;
+      const newpath = await uploader(path);
+      urls.push(newpath);
+      
+      // Delete the local file after successful Cloudinary upload
+      console.log(path);
+      setTimeout(() => {
+        // Check file existence
+        fs.promises.access(`public/images/${file.filename}`, fs.constants.F_OK)
+          .then(() => {
+            // File exists, attempt to delete it
+            fs.promises.unlink(`public/images/${file.filename}`)
+              .then(() => console.log(`Successfully deleted file: ${file.filename}`))
+              .catch(error => console.error(`Error deleting file: ${file.filename}. Error: ${error}`));
+          })
+          .catch(error => console.error(`File does not exist: ${file.filename}. Error: ${error}`));
+      }, 5000); // Delay for 1 second (1000 milliseconds)
+    }
 
-      // Extract URLs, public_ids, and asset_ids from the results
-      const urls = results.map(result => result.url);
-      const imageDetails = results.map(result => ({
-          url: result.url,
-          public_id: result.public_id,
-          asset_id: result.asset_id
-      }));
-
-      // Delete local files after successful upload to Cloudinary
-      await Promise.all(req.files.map(file => fs.unlink(file.path)));
-
-      // Find the Product by ID and update the images field
-      const updateProduct = await Product.findByIdAndUpdate(
-          id,
-          { $push: { images: { $each: imageDetails } } }, // Add the image details to the images array
-          { new: true } // Return the updated document
-      );
-
-      if (!updateProduct) {
-          return res.status(404).send('Product not found');
-      }
-
-      // Respond with the Cloudinary details and the updated Product
-      res.status(200).json({
-          message: 'Images uploaded and details added to the Product successfully',
-          images: imageDetails, // Include all the image details
-          product: updateProduct // Note: changed the property name to lowercase 'product' for consistency
-      });
+    res.json(urls);
   } catch (error) {
-      // Log and handle the error
-      console.error(`Error during image upload to Cloudinary: ${error}`);
-      next(error);
+    console.error(`Error uploading images: ${error}`);
+    res.status(500).json({ message: "Internal server error" });
   }
-};
+});
+
+
 
 
 
@@ -579,5 +594,6 @@ module.exports = {
     addToWishList,
     rating,
     uploadImages,
-    uploadImagesToCloudinary
+    deleteImages,
+    
 };
